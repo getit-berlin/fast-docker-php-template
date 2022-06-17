@@ -1,0 +1,51 @@
+version: '3'
+services:
+  web:
+    image: nginx:latest
+    depends_on: 
+      - sftp
+      - php
+      - db
+    ports:
+      - '80:80'
+    volumes:
+      - template-html:/var/www/html    
+      - ./container/web/nginx.conf:/etc/nginx/conf.d/default.conf      
+
+  sftp:
+    image: atmoz/sftp
+    volumes:
+      - template-html:/home/${SFTP_USER}/upload
+    ports:
+        - "${SFTP_PORT}:22"
+    command: ${SFTP_USER}:${SFTP_PASS}:33
+      
+  php:
+    ports:
+      - '22:22'  
+    build: ./container/php/.
+    volumes:
+      - template-html:/var/www/html
+      - ./container/php/php.ini:/usr/local/etc/php/php.ini
+      - ./container/php/log.conf:/usr/local/etc/php-fpm.d/zz-log.conf      
+    environment:
+      PHP_OPCACHE_VALIDATE_TIMESTAMPS: 1  
+      
+  db:
+    image: mariadb:10.1.48
+    container_name: ${DB_HOST}
+    restart: always
+    ports:
+      - '3306:3306'
+    volumes:
+        - template-db:/var/lib/mysql
+    command: ['mysqld', '--character-set-server=${DB_CHARSET}', '--collation-server=${DB_COLLATION}']
+    environment:
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      
+volumes:
+  template-db:
+  template-html:
